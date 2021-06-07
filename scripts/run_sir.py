@@ -7,6 +7,10 @@ import covid.util as util
 import configs
 import numpy as onp
 
+import os
+
+# Get the path of this script
+basepath = os.path.abspath(os.curdir)
 
 if __name__ == "__main__":
 
@@ -17,6 +21,14 @@ if __name__ == "__main__":
     parser.add_argument('--prefix', help='path prefix for saving results', default='results')
     parser.add_argument('--no-run', help="don't run the model (only do vis)", dest='run', action='store_false')
     parser.add_argument('--config', help='model configuration name', default='SEIRD')
+    parser.add_argument('--world-pop-data', help='world population data CSV', default=None)
+    parser.add_argument('--state-data', help='state data CSV', default=None)
+    parser.add_argument('--county-data', help='county data CSV', default=None)
+    parser.add_argument('--fips-data', help='FIPS location data CSV', default=None)
+    parser.add_argument('--confirmed-data', help='confirmed data CSV', default=None)
+    parser.add_argument('--death-data', help='death data CSV', default=None)
+    parser.add_argument('--confirmed-country-data', help='confirmed country specific data CSV', default=None)
+    parser.add_argument('--death-country-data', help='death country specific data CSV', default=None)
     parser.set_defaults(run=True)
 
     args = parser.parse_args()
@@ -27,261 +39,36 @@ if __name__ == "__main__":
 
     config = getattr(configs, args.config)
 
-    data = config.get('data') or util.load_data()
+    data = config.get('data') or util.load_data(baseURL=basepath + "/",
+                                                worldURL=args.world_pop_data,
+                                                stateURL=args.state_data,
+                                                countyURL=args.county_data,
+                                                fipsURL=args.fips_data,
+                                                confirmedURL=args.confirmed_data,
+                                                deathURL=args.death_data,
+                                                confirmedCountryURL=args.confirmed_country_data,
+                                                deathCountryURL=args.death_country_data)
 
-    
     # MI doesn't report on Sundays
-    #   April  4, 2021 --- add WA
-    for place in ['MI', 'WA']:
-        data[place]['data'].loc['2021-05-02', 'confirmed'] = onp.nan
-        data[place]['data'].loc['2021-05-02', 'death'] = onp.nan
+    #   Oct 19 - add MS
+    for place in ['MI', 'NH', 'MS']:
+        data[place]['data'].loc['2021-02-14', 'confirmed'] = onp.nan
+        data[place]['data'].loc['2021-02-14', 'death'] = onp.nan
 
     # RI, CT, GU don't report on Saturdays/Sundays
     #   Oct 19 -- add WI (removed Oct 25)
     #   Oct 18 -- add KS
-    #   March 14, 2021 --- add TN
-    #   March 21, 2021 --- add AK
-    #   March 28, 2021 --- add LA
-    #   April  4, 2021 --- Add WY
-    #   April  4, 2021 --- (remove WA)
-    #   April 11, 2021 --- add NM, NC
-    #   April 18, 2021 --- add ID
-    #   May   01, 2021 --- add SD
-    #   May   01, 2021 --- add NV
-    for place in ['RI', 'GU', 'KS', 'CT', 'TN', 'AK', 'LA', 'WY', 'NM', 'NC', 'ID', 'SD', 'NV']:
-        data[place]['data'].loc['2021-05-01', 'confirmed'] = onp.nan
-        data[place]['data'].loc['2021-05-02', 'confirmed'] = onp.nan
-        data[place]['data'].loc['2021-05-01', 'death'] = onp.nan
-        data[place]['data'].loc['2021-05-02', 'death'] = onp.nan
+    for place in ['RI', 'GU', 'KS', 'WA', 'CT']:
+        data[place]['data'].loc['2021-02-13', 'confirmed'] = onp.nan
+        data[place]['data'].loc['2021-02-14', 'confirmed'] = onp.nan
+        data[place]['data'].loc['2021-02-13', 'death'] = onp.nan
+        data[place]['data'].loc['2021-02-14', 'death'] = onp.nan
 
-
-    # OK is updating death data intermittently. Adjust.
-    util.redistribute(data['OK']['data'], '2021-03-09', 147, 6, 'death')
-    util.redistribute(data['OK']['data'], '2021-03-16', 73, 6, 'death')
-    util.redistribute(data['OK']['data'], '2021-03-24', 62*6//7, 6, 'death')
-    util.redistribute(data['OK']['data'], '2021-03-31', 103*6//7, 6, 'death')
-    util.redistribute(data['OK']['data'], '2021-04-07', 103*6//7, 6, 'death')
-    util.redistribute(data['OK']['data'], '2021-04-07', (1716-103), 300, 'death') # big spike on 04-07: JHU
-    util.redistribute(data['US']['data'], '2021-04-07', (1716-103), 300, 'death') # also at US level
-    util.redistribute(data['OK']['data'], '2021-04-07', 1300, 300, 'confirmed') # case spike OK
-    util.redistribute(data['US']['data'], '2021-04-07', 1300, 300, 'confirmed') # case spike US
-    util.redistribute(data['OK']['data'], '2021-04-14', 28*6//7, 6, 'death')
-    util.redistribute(data['OK']['data'], '2021-04-21', 19*6//7, 6, 'death')
-    util.redistribute(data['OK']['data'], '2021-04-28', 72*6//7, 6, 'death')
-    data['OK']['data'].loc['2021-04-29':, 'death'] = onp.nan
-
-    # Ohio death is now delayed and attributed to time of death
-    # by JHU. The last week (or more) is basically empty. Guesstimate
-    # how far back and set to missing.
-    data['OH']['data'].loc['2021-04-18':, 'death'] = onp.nan
-
-    # possible weird effects of weekend cycle
-    util.redistribute(data['NM']['data'], '2021-04-05', 443*2//3, 2, 'confirmed')
-    util.redistribute(data['NM']['data'], '2021-04-12', 619*2//3, 2, 'confirmed')
-    util.redistribute(data['NM']['data'], '2021-04-19', 610*2//3, 2, 'confirmed')
-    util.redistribute(data['NM']['data'], '2021-04-26', 623*2//3, 2, 'confirmed')
-
-    # fix huge neg. number
-    util.redistribute(data['NJ']['data'], '2021-04-26', -10800, 90, 'confirmed')
-
-    # JHU weekly report
-    util.redistribute(data['WV']['data'], '2021-04-27', -162, 90, 'death')
-
-    # https://content.govdelivery.com/accounts/AKDHSS/bulletins/2d226f2?reqfrom=share
-    # Twelve deaths of Alaska residents over the past several months were identified through death certificate review:
-    util.redistribute(data['AK']['data'], '2021-04-26', 12, 90, 'death')
-
-    util.redistribute(data['IA']['data'], '2021-04-30', 16, 5, 'death')
-
-    # fix weird jump then drop on 4-30 and 5-01
-    util.redistribute(data['CA']['data'], '2021-05-01', -312, 1, 'death')
-
-    # https://www.nytimes.com/interactive/2021/us/tennessee-covid-cases.html
-    util.redistribute(data['TN']['data'], '2021-04-19', 2000, 90, 'confirmed')
-    util.redistribute(data['MA']['data'], '2021-04-22', 800,  90, 'confirmed')
-
-    # JHU weekly report
-    util.redistribute(data['AL']['data'], '2021-04-20', 1110, 90, 'confirmed')
-
-    util.redistribute(data['IA']['data'], '2021-04-24', 17, 14, 'death')
-
-    util.redistribute(data['MA']['data'], '2021-04-04', -1000, -6, 'confirmed')
-    util.redistribute(data['MA']['data'], '2021-04-04', -1000,  6, 'confirmed')
-
-    # https://chfs.ky.gov/Pages/cvdaily.aspx?View=April%202021%20Daily%20Summaries&Title=Table%20Viewer%20Webpart
-    util.redistribute(data['KY']['data'], '2021-04-23', 17, 90, 'death')
-    util.redistribute(data['KY']['data'], '2021-04-24', 11, 90, 'death')
-
-    # https://www.wthr.com/article/news/health/latest-indiana-coronavirus-updates-global-death-toll-tops-3-million-saturday-april-17-speedway-clinic/531-c41b3be8-59f0-468c-a4f7-63b7dbe00b4e
-    util.redistribute(data['IN']['data'], '2021-04-17', 1241, 90, 'confirmed')
-
-    # JHU weekly report
-    util.redistribute(data['AL']['data'], '2021-04-13', 1150, 90, 'confirmed')
-    
-    # JHU / https://siouxlandnews.com/news/coronavirus/covid-19-in-nebraska-04-15-2021
-    util.redistribute(data['NE']['data'], '2021-04-15', -22, 90, 'death')
-    
-    # https://github.com/CSSEGISandData/COVID-19/issues/3975
-    # reported drop of 11454 doesn't seem plausible --- add 2200
-    util.redistribute(data['MO']['data'], '2021-04-17', -11454+2200, 300, 'confirmed')
-
-    # JHU weekly report
-    util.redistribute(data['AK']['data'], '2021-04-15', 20, 90, 'death')
-
-    # https://www.8newsnow.com/news/health/coronavirus-health/new-covid-19-cases-highest-in-a-month-18-fully-vaccinated/
-    # https://www.8newsnow.com/news/health/coronavirus-health/new-nevada-clark-county-report-high-covid-19-case-counts-for-2nd-consecutive-day-due-to-delayed-electronic-laboratory-reports/
-    util.redistribute(data['NV']['data'], '2021-04-10', 164, 90, 'confirmed')
-    util.redistribute(data['NV']['data'], '2021-04-10', 471, 90, 'confirmed')
-
-    # Guessing
-    util.redistribute(data['NE']['data'], '2021-04-08', 21, 30, 'death')
-    util.redistribute(data['NE']['data'], '2021-04-09', 9, 20, 'death')
-
-    # JHU / Billings Gazette (e.g., https://billingsgazette.com/news/state-and-regional/montana-reports-218-covid-19-cases-11-deaths/article_54c208c7-c57e-5dc2-9d97-9eb8251dd949.html)
-    util.redistribute(data['MT']['data'], '2021-04-06', 11, 90, 'death')
-    util.redistribute(data['MT']['data'], '2021-04-07', 9, 90, 'death')
-    util.redistribute(data['MT']['data'], '2021-04-09', 72, 90, 'confirmed')
-    util.redistribute(data['MT']['data'], '2021-04-09', 26, 90, 'death')
-
-    util.redistribute(data['MT']['data'], '2021-04-02', 13, 21, 'death')    
-    util.redistribute(data['MT']['data'], '2021-04-03', 8, 7, 'death')    
-
-    # Guessing
-    util.redistribute(data['NE']['data'], '2021-04-02', 600, 30, 'confirmed')
-
-    # https://www.wabi.tv/2021/04/02/401-newly-recorded-coronavirus-cases-in-maine-highest-one-day-increase-in-more-than-two-months/
-    util.redistribute(data['ME']['data'], '2021-04-02', 150, 4, 'confirmed')
-
-    # https://dhhr.wv.gov/News/2021/Pages/COVID-19-Daily-Update-3-31-2021.aspx
-    util.redistribute(data['WV']['data'], '2021-03-31', 34, 90, 'death')    
-
-    # https://who13.com/news/coronavirus/iowa-reports-68-more-covid-19-deaths-and-431-new-cases/
-    # mentions backdatings, nonspecific
-    util.redistribute(data['IA']['data'], '2021-04-03', 65, 90, 'death')
-
-    # JHU: 2,029 historical cases; Ellis County reported 294
-    util.redistribute(data['TX']['data'], '2021-03-26', 2029+294, 90, 'confirmed')
-
-    util.redistribute(data['MN']['data'], '2021-03-25', 20, 20, 'death')
-    util.redistribute(data['VI']['data'], '2021-03-24', 100, 14, 'confirmed')
-    util.redistribute(data['NE']['data'], '2021-03-24', 25, 20, 'death')
-
-    # https://github.com/CSSEGISandData/COVID-19/issues/3869
-    util.redistribute(data['NY']['data'], '2021-03-24', 15000, 3, 'confirmed')
-    util.redistribute(data['NY']['data'], '2021-03-24', 3*255//4, 3, 'death')
-    util.redistribute(data['NY']['data'], '2021-03-24', 4000, 30, 'confirmed') # guess
-
-    # https://covid19.ncdhhs.gov/dashboard
-    util.redistribute(data['NC']['data'], '2021-03-25', 68, 90, 'death')
-
-    #  e.g. https://chfs.ky.gov/cvdaily/COVID19DailyReport032521.pdf
-    util.redistribute(data['KY']['data'], '2021-03-22', 50, 90, 'death')
-    util.redistribute(data['KY']['data'], '2021-03-23', 4, 90, 'death')
-    util.redistribute(data['KY']['data'], '2021-03-24', 25, 90, 'death')
-    util.redistribute(data['KY']['data'], '2021-03-25', 88, 90, 'death')
-    util.redistribute(data['KY']['data'], '2021-03-26', 11, 90, 'death')
-
-    util.redistribute(data['CA']['data'], '2021-03-25', 200, 90, 'death')
-
-    # https://dhhr.wv.gov/News/2021/Pages/COVID-19-Daily-Update-3-19-2021.aspx
-    util.redistribute(data['WV']['data'], '2021-03-19', 20, 90, 'death')
-
-    # https://github.com/CSSEGISandData/COVID-19/issues/3826
-    util.redistribute(data['AL']['data'], '2021-03-15', 4007, 90, 'confirmed')
-
-    # JHU
-    util.redistribute(data['KY']['data'], '2021-03-18', 417, 90, 'death')
-    util.redistribute(data['KY']['data'], '2021-03-19', 166, 90, 'death')
-
-    util.redistribute(data['CA']['data'], '2021-03-13', 600, 90, 'death')
-
-    # https://www.wabi.tv/2021/03/09/17-new-covid-related-deaths-in-maine-139-new-cases/
-    util.redistribute(data['ME']['data'], '2021-03-09', 17, 45, 'death')
-
-    # JHU: 891 backlogged cases and 138 backlogged deaths reported on March 9
-    util.redistribute(data['MN']['data'], '2021-03-09', 891, 90, 'confirmed')
-    util.redistribute(data['MN']['data'], '2021-03-09', 138, 90, 'death')
-
-    # JHU: West Virginia published 165 backlogged deaths on March 12
-    util.redistribute(data['WV']['data'], '2021-03-12', 165, 90, 'death')
-
-    # JHU weekly update
-    util.redistribute(data['TX']['data'], '2021-03-03', 1614, 90, 'confirmed')
-
-    # JHU: Alaska backlogged deaths: Nine backlogged deaths on March 1 
-    util.redistribute(data['AK']['data'], '2021-03-01', 9, 60, 'death')
-
-    # JHU weekly update
-    util.redistribute(data['AL']['data'], '2021-03-03', 2114, 90, 'confirmed')
-
-    # JHU
-    util.redistribute(data['PR']['data'], '2021-02-21', 15, 90, 'death')
-    util.redistribute(data['PR']['data'], '2021-02-24', 15, 90, 'death')
-
-    # JHU
-    util.redistribute(data['WI']['data'], '2021-02-25', 30, 10, 'death')
-
-    # https://twitter.com/ADHPIO/status/1366163333225799682
-    util.redistribute(data['AR']['data'], '2021-02-28', 2932, 90, 'confirmed')
-    util.redistribute(data['AR']['data'], '2021-02-28', -174, 90, 'death')
-
-    # "Virginia daily reports include many backlogged deaths and this behavior is anticipated to continue." -JHU
-    util.redistribute(data['VA']['data'], '2021-02-20', 74, 90, 'death')
-    util.redistribute(data['VA']['data'], '2021-02-21', 109, 90, 'death')
-    util.redistribute(data['VA']['data'], '2021-02-22', 130, 90, 'death')
-    util.redistribute(data['VA']['data'], '2021-02-23', 147, 90, 'death')
-    util.redistribute(data['VA']['data'], '2021-02-24', 124, 90, 'death')
-    util.redistribute(data['VA']['data'], '2021-02-25', 131, 90, 'death')
-    util.redistribute(data['VA']['data'], '2021-02-26', 209, 90, 'death')
-    util.redistribute(data['VA']['data'], '2021-02-27', 160, 90, 'death')    
-    util.redistribute(data['VA']['data'], '2021-02-28', 140, 90, 'death')
-    util.redistribute(data['VA']['data'], '2021-03-01', 200, 90, 'death')
-    util.redistribute(data['VA']['data'], '2021-03-02', 125, 90, 'death')
-    util.redistribute(data['VA']['data'], '2021-03-03', 350, 90, 'death')    
-    util.redistribute(data['VA']['data'], '2021-03-04', 0, 90, 'death')    
-    util.redistribute(data['VA']['data'], '2021-03-05', 40, 90, 'death')    
-    util.redistribute(data['VA']['data'], '2021-03-06', 50, 90, 'death')    
-    util.redistribute(data['VA']['data'], '2021-03-07', 47, 90, 'death')
-    util.redistribute(data['VA']['data'], '2021-03-08', 57, 90, 'death')
-    util.redistribute(data['VA']['data'], '2021-03-09', 77, 90, 'death')
-    util.redistribute(data['VA']['data'], '2021-03-10', 29, 90, 'death')
-    util.redistribute(data['VA']['data'], '2021-03-11', 23, 90, 'death')
-    util.redistribute(data['VA']['data'], '2021-03-12', 29, 90, 'death')
-    util.redistribute(data['VA']['data'], '2021-03-19', -100, 30, 'death')
-
-
-    # JHU CSSE email: "39 historical deaths in Maine on February 23 and 24"
-    util.redistribute(data['ME']['data'], '2021-02-24', 16, 90, 'death')
-    util.redistribute(data['ME']['data'], '2021-02-25', 23, 90, 'death')
-
-    # https://twitter.com/Delaware_DHSS
-    # state reports 193 new cases; data says 789. redistribute difference
-    util.redistribute(data['DE']['data'], '2021-03-11', 789-193, 90, 'confirmed')
-
-    # https://twitter.com/Delaware_DHSS
-    util.redistribute(data['DE']['data'], '2021-02-23', 8, 90, 'death')
-    util.redistribute(data['DE']['data'], '2021-02-24', 18, 90, 'death')
-    util.redistribute(data['DE']['data'], '2021-02-26', 9, 90, 'death')
-    util.redistribute(data['DE']['data'], '2021-03-03', 11, 90, 'death')
-    util.redistribute(data['DE']['data'], '2021-03-04', 4, 90, 'death')
-    util.redistribute(data['DE']['data'], '2021-03-05', 9, 90, 'death')
-    util.redistribute(data['DE']['data'], '2021-03-06', 8, 90, 'death')
-    util.redistribute(data['DE']['data'], '2021-03-07', 6, 90, 'death')
-    util.redistribute(data['DE']['data'], '2021-03-08', 2, 90, 'death')
-    util.redistribute(data['DE']['data'], '2021-03-10', 8, 90, 'death')
-    util.redistribute(data['DE']['data'], '2021-03-13', 5, 90, 'death')
-
-    util.redistribute(data['MP']['data'], '2021-02-20', 7, 7, 'confirmed')
-
-    # https://github.com/CSSEGISandData/COVID-19/issues/3705
-    # (backdistributed week of March 1)
-    #util.redistribute(data['IA']['data'], '2021-02-19', 26775, 200, 'confirmed')
-    
 
     # https://covidtracking.com/data/state/ohio/notes
-    #util.redistribute(data['OH']['data'], '2021-02-11', 650, 90, 'death')
-    #util.redistribute(data['OH']['data'], '2021-02-12', 2500, 90, 'death')
-    #util.redistribute(data['OH']['data'], '2021-02-13', 1125, 90, 'death')
+    util.redistribute(data['OH']['data'], '2021-02-11', 650, 90, 'death')
+    util.redistribute(data['OH']['data'], '2021-02-12', 2500, 90, 'death')
+    util.redistribute(data['OH']['data'], '2021-02-13', 1125, 90, 'death')
 
     # https://content.govdelivery.com/accounts/AKDHSS/bulletins/2be6de2
     # "All 17 deaths were identified through death certificate review"

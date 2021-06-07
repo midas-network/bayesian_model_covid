@@ -38,13 +38,13 @@ Data
 ************************************************************
 """
 
-def load_world_data():
+def load_world_data(baseURL=None, url=None, confirmedURL=None, deathURL=None):
     # world data
-    world = jhu.load_world()
+    world = jhu.load_world(baseURL=baseURL, confirmedURL=confirmedURL, deathURL=deathURL)
     world = world.loc[:,(slice(None), 'tot', slice(None))] # only country totals
 
     country_names = world.columns.unique(level=0)
-    world_pop_data = pd.read_csv('https://s3.amazonaws.com/rawstore.datahub.io/630580e802a621887384f99527b68f59.csv')
+    world_pop_data = pd.read_csv(url or 'https://s3.amazonaws.com/rawstore.datahub.io/630580e802a621887384f99527b68f59.csv')
     world_pop_data = world_pop_data.set_index("Country")
         
     country_names_valid = set(country_names) & set(world_pop_data.index) 
@@ -60,10 +60,10 @@ def load_world_data():
       
     return world_data
 
-def load_state_data():
+def load_state_data(baseURL=None, stateURL=None, fipsURL=None, confirmedCountryURL=None, deathCountryURL=None):
 
-    US = jhu.load_us()
-    info = jhu.get_state_info()
+    US = jhu.load_us(baseURL=baseURL, fipsURL=fipsURL, confirmedCountryURL=confirmedCountryURL, deathCountryURL=deathCountryURL)
+    info = jhu.get_state_info(stateURL)
     
     data = {
         k : {'data': US[k].copy(), 
@@ -75,9 +75,9 @@ def load_state_data():
     
     return data
 
-def load_county_data():
-    US = jhu.load_us(counties=True)
-    info = jhu.get_county_info()
+def load_county_data(baseURL=None, countyURL=None, fipsURL=None):
+    US = jhu.load_us(counties=True, baseURL=baseURL, fipsURL=fipsURL)
+    info = jhu.get_county_info(countyURL, fipsURL)
     
     counties = set(info.index) & set(US.columns.unique(level=0))
     
@@ -92,10 +92,10 @@ def load_county_data():
     return data
 
 
-def load_data():
-    state_data = load_state_data()
-    world_data = load_world_data()
-    county_data = load_county_data()
+def load_data(baseURL=None, worldURL=None, stateURL=None, countyURL=None, fipsURL=None, confirmedURL=None, deathURL=None, confirmedCountryURL=None, deathCountryURL=None):
+    state_data = load_state_data(baseURL=baseURL, stateURL=stateURL, fipsURL=fipsURL, confirmedCountryURL=confirmedCountryURL, deathCountryURL=deathCountryURL)
+    world_data = load_world_data(baseURL=baseURL, url=worldURL, confirmedURL=confirmedURL, deathURL=deathURL)
+    county_data = load_county_data(baseURL=baseURL, countyURL=countyURL, fipsURL=fipsURL)
     return dict(world_data, **state_data, **county_data)
 
 
