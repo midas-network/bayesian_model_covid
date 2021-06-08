@@ -1,13 +1,15 @@
 import numpyro
 numpyro.enable_x64()
 
+import os
 import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import argparse
 import covid.util as util
 import configs
 import numpy as onp
-
-import os
 
 # Get the path of this script
 basepath = os.path.abspath(os.curdir)
