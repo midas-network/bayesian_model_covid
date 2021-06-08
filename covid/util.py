@@ -75,8 +75,8 @@ def load_state_data(baseURL=None, stateURL=None, fipsURL=None, confirmedCountryU
     
     return data
 
-def load_county_data(baseURL=None, countyURL=None, fipsURL=None):
-    US = jhu.load_us(counties=True, baseURL=baseURL, fipsURL=fipsURL)
+def load_county_data(baseURL=None, countyURL=None, fipsURL=None, confirmedCountryURL=None, deathCountryURL=None):
+    US = jhu.load_us(counties=True, baseURL=baseURL, fipsURL=fipsURL, confirmedCountryURL=confirmedCountryURL, deathCountryURL=deathCountryURL)
     info = jhu.get_county_info(countyURL, fipsURL)
     
     counties = set(info.index) & set(US.columns.unique(level=0))
@@ -95,7 +95,7 @@ def load_county_data(baseURL=None, countyURL=None, fipsURL=None):
 def load_data(baseURL=None, worldURL=None, stateURL=None, countyURL=None, fipsURL=None, confirmedURL=None, deathURL=None, confirmedCountryURL=None, deathCountryURL=None):
     state_data = load_state_data(baseURL=baseURL, stateURL=stateURL, fipsURL=fipsURL, confirmedCountryURL=confirmedCountryURL, deathCountryURL=deathCountryURL)
     world_data = load_world_data(baseURL=baseURL, url=worldURL, confirmedURL=confirmedURL, deathURL=deathURL)
-    county_data = load_county_data(baseURL=baseURL, countyURL=countyURL, fipsURL=fipsURL)
+    county_data = load_county_data(baseURL=baseURL, countyURL=countyURL, fipsURL=fipsURL, confirmedCountryURL=confirmedCountryURL, deathCountryURL=deathCountryURL)
     return dict(world_data, **state_data, **county_data)
 
 
